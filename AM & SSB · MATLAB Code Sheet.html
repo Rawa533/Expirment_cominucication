@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AM & SSB · MATLAB Code Sheet</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f4f5fb;--card:#fff;--ink:#14172b;--mute:#666c8c;--line:#e0e3f0;--acc:#5b5bf0;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c0e1b;--card:#151830;--ink:#eceefb;--mute:#8d93b8;--line:#252949;--acc:#8b8bff;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0c0e1b;--card:#151830;--ink:#eceefb;--mute:#8d93b8;--line:#252949;--acc:#8b8bff;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding:20px 14px 40px}
+h1{font-size:25px;margin:0;letter-spacing:-.02em}
+h1 span{background:linear-gradient(90deg,#6c9cff,#c084fc,#ff6b8b);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--mute);margin:4px 0 16px}
+.top{display:flex;gap:8px;margin-bottom:12px}
+.top button{flex:1;border:1px solid var(--line);background:var(--card);color:var(--ink);font:700 15px inherit;font-family:inherit;padding:12px;border-radius:14px;cursor:pointer}
+.top button.on{background:linear-gradient(135deg,#5b5bf0,#a855f7);color:#fff;border-color:transparent}
+.tabs{display:flex;gap:4px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px}
+.tabs button{flex:none;border:0;background:none;color:var(--mute);font:600 14px inherit;font-family:inherit;padding:8px 14px;border-radius:10px;cursor:pointer;white-space:nowrap}
+.tabs button.on{background:var(--card);color:var(--acc);box-shadow:inset 0 0 0 1px var(--line)}
+.win{background:#0f1226;border:1px solid #262b52;border-radius:16px;overflow:hidden;box-shadow:0 12px 32px -18px rgba(10,12,40,.6)}
+.bar{display:flex;align-items:center;gap:7px;padding:10px 14px;background:#161a35;border-bottom:1px solid #262b52}
+.bar i{width:11px;height:11px;border-radius:50%;display:block}
+.bar span{margin-left:8px;color:#8d93b8;font:12.5px ui-monospace,Menlo,monospace;flex:1}
+.bar button{border:1px solid #333a6b;background:#1d2244;color:#cfd3f5;font:600 12px inherit;font-family:inherit;padding:6px 12px;border-radius:8px;cursor:pointer}
+pre{margin:0;padding:12px 0;overflow-x:auto;font:13px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#d7dbf5;counter-reset:l;tab-size:4}
+pre .l{display:block;white-space:pre;padding:0 16px 0 0}
+pre .l::before{counter-increment:l;content:counter(l);display:inline-block;width:38px;margin-right:14px;text-align:right;color:#4a5080;user-select:none}
+.c{color:#6b7399;font-style:italic}.sec{color:#7dd3a8;font-weight:700;font-style:normal}.s{color:#f6c177}.n{color:#ff9e64}.k{color:#c084fc}.f{color:#7aa2ff}
+.exp{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px 18px 14px}
+.exp h3{margin:16px 0 6px;font-size:15px}
+.exp li{margin:4px 0}
+.exp code,.tag{font-family:ui-monospace,Menlo,monospace;background:var(--bg);padding:1px 6px;border-radius:6px;font-size:12.5px}
+.warn{border-left:4px solid #f59e0b;background:var(--card);border-radius:12px;padding:10px 14px;margin-top:12px;font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px}
+td,th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--mute);font-weight:600}
+</style></head><body><div class="wrap">
+<h1><span>AM & SSB Code Sheet</span></h1>
+<p class="sub">Communication System Lab · Garmian Polytechnic University</p>
+<div class="top"><button id="bAM" class="on">Lab 1 · AM</button><button id="bSSB">Lab 2 · SSB</button></div>
+<div class="tabs" id="tabs"></div>
+<div id="out"></div>
+</div>
+<script>
+const R=String.raw;
+const D={AM:{},SSB:{}};
+
+D.AM.short=R`clear; clc; close all
+
+% parameters
+fs = 20000;   t = 0:1/fs:0.04;
+fc = 1000;    fm = 100;    Ac = 1;
+
+% signals
+m1 = 0.5*cos(2*pi*fm*t);
+m2 = 1.5*cos(2*pi*fm*t);
+s1 = (Ac + m1).*cos(2*pi*fc*t);
+s2 = (Ac + m2).*cos(2*pi*fc*t);
+
+% envelope detector
+[b,a] = butter(5, 150/(fs/2), 'low');
+rec = filter(b,a,abs(s1));
+rec = (rec - mean(rec))*pi/2;
+
+% spectrum
+N = 4096;
+f = (-N/2:N/2-1)*fs/N;
+S = abs(fftshift(fft(s1,N)))/N;
+
+% plots
+subplot(4,1,1), plot(t, s1, t, Ac+m1)
+subplot(4,1,2), plot(t, s2, t, abs(Ac+m2))
+subplot(4,1,3), plot(t, m1, t, rec)
+subplot(4,1,4), plot(f, S), xlim([-2000 2000])`;
+
+D.AM.long=R`%% ================================================
+%%  AM - Amplitude Modulation (study version)
+%% ================================================
+clear; clc; close all
+
+%% 1. Parameters
+fs = 20000;               % sampling rate (Hz)
+t  = 0:1/fs:0.04;         % time vector (s)
+fc = 1000;                % carrier frequency (Hz)
+fm = 100;                 % message frequency (Hz)
+Ac = 1;                   % carrier amplitude
+
+%% 2. Message and AM signals
+m1 = 0.5*cos(2*pi*fm*t);  % mu = 0.5  (normal)
+m2 = 1.5*cos(2*pi*fm*t);  % mu = 1.5  (overmodulated)
+s1 = (Ac + m1).*cos(2*pi*fc*t);
+s2 = (Ac + m2).*cos(2*pi*fc*t);
+
+%% 3. Envelope detector (rectify -> low-pass -> remove DC -> scale)
+[b, a] = butter(5, 150/(fs/2), 'low');
+rec = filter(b, a, abs(s1));
+rec = (rec - mean(rec)) * (pi/2);
+
+%% 4. Spectrum
+N = 4096;
+f = (-N/2:N/2-1) * (fs/N);
+S = abs(fftshift(fft(s1, N))) / N;
+
+%% 5. Plot style
+blue = [0.23 0.42 0.96];  red   = [0.94 0.29 0.42];
+gold = [0.96 0.62 0.04];  green = [0.06 0.73 0.51];
+purp = [0.66 0.33 0.97];
+tms  = t*1e3;             % time in ms
+
+figure('Color','w','Position',[100 60 950 820])
+tl = tiledlayout(4,1,'TileSpacing','compact','Padding','compact');
+title(tl,'Amplitude Modulation','FontSize',16,'FontWeight','bold')
+
+nexttile
+plot(tms,s1,'Color',blue,'LineWidth',1.2); hold on
+plot(tms,Ac+m1,'Color',red,'LineWidth',2)
+title('AM (\mu = 0.5)'); legend('s(t)','Envelope')
+
+nexttile
+plot(tms,s2,'Color',gold,'LineWidth',1.2); hold on
+plot(tms,abs(Ac+m2),'--','Color',red,'LineWidth',2)
+title('Overmodulated (\mu = 1.5)'); legend('s(t)','|1+m(t)|')
+
+nexttile
+plot(tms,m1,'Color',blue,'LineWidth',2); hold on
+plot(tms,rec,'--','Color',purp,'LineWidth',2)
+title('Original vs Recovered'); legend('m(t)','Recovered')
+
+nexttile
+area(f/1e3,S,'FaceColor',green,'FaceAlpha',0.25,'EdgeColor',green,'LineWidth',1.5)
+xlim([-2 2]); title('Magnitude Spectrum')
+
+%% 6. Shared axes formatting
+ax = findall(gcf,'Type','axes');
+set(ax,'FontSize',11,'Box','on','GridAlpha',0.15,'XGrid','on','YGrid','on')
+xlabel(ax(1),'Frequency (kHz)'); ylabel(ax(1),'|S(f)|')
+for k = 2:4, xlabel(ax(k),'Time (ms)'); ylabel(ax(k),'Amplitude (V)'); end`;
+
+D.AM.orig=R`clear
+clc
+close all
+fs = 20000;
+t = 0:1/fs:0.04;
+fc = 1000;
+fm = 100;
+Ac = 1;
+m1 = 0.5*cos(2*pi*fm*t);
+m2 = 1.5*cos(2*pi*fm*t);
+s1 = (Ac + m1).*cos(2*pi*fc*t);
+s2 = (Ac + m2).*cos(2*pi*fc*t);
+[b, a] = butter(5, 150/(fs/2), 'low');
+rec = filter(b, a, abs(s1));
+rec = (rec - mean(rec)) * (pi/2);
+N = 4096;
+f = (-N/2:N/2-1)*(fs/N);
+S_fft = abs(fftshift(fft(s1, N))) / N;
+figure
+subplot(4,1,1)
+plot(t*1e3, s1, 'b', t*1e3, Ac+m1, 'r')
+grid on
+title('AM (\mu=0.5)')
+xlabel('ms')
+ylabel('V')
+subplot(4,1,2)
+plot(t*1e3, s2, 'k', t*1e3, abs(Ac+m2), 'r--')
+grid on
+title('Overmodulated (\mu=1.5)')
+xlabel('ms')
+ylabel('V')
+subplot(4,1,3)
+plot(t*1e3, m1, 'b', t*1e3, rec, 'm--')
+grid on
+title('Original vs Recovered')
+xlabel('ms')
+ylabel('V')
+subplot(4,1,4)
+plot(f/1e3, S_fft, 'g')
+xlim([-2 2])
+grid on
+title('Magnitude Spectrum')
+xlabel('kHz')
+ylabel('|S(f)|')`;
+
+D.SSB.short=R`clear; clc; close all
+
+% parameters
+fs = 10000;   t = 0:1/fs:0.04;
+fc = 1000;    fm = 100;
+
+% message, carrier + 90 deg versions
+m  = cos(2*pi*fm*t);    mh = sin(2*pi*fm*t);
+c  = cos(2*pi*fc*t);    ch = sin(2*pi*fc*t);
+
+% SSB-USB
+ssb = m.*c - mh.*ch;
+
+% coherent demod
+[b,a] = butter(5, 150/(fs/2), 'low');
+rec = filter(b,a,ssb.*c)*2;
+
+% spectrum
+N = 4096;
+f = (-N/2:N/2-1)*fs/N;
+S = abs(fftshift(fft(ssb,N)))/N;
+
+% plots
+subplot(2,1,1), plot(t, ssb)
+subplot(2,1,2), plot(t, m, t, rec)
+figure, plot(f, S), xlim([-2000 2000])`;
+
+D.SSB.long=R`%% ================================================
+%%  SSB-USB - Single Sideband (study version)
+%% ================================================
+clear; clc; close all
+
+%% 1. Parameters
+fs = 10000;               % sampling rate (Hz)
+t  = 0:1/fs:0.04;         % time vector (s)
+fc = 1000;                % carrier frequency (Hz)
+fm = 100;                 % message frequency (Hz)
+
+%% 2. Message, carrier and their Hilbert transforms
+m  = cos(2*pi*fm*t);      % message
+mh = sin(2*pi*fm*t);      % Hilbert{m}
+c  = cos(2*pi*fc*t);      % carrier
+ch = sin(2*pi*fc*t);      % Hilbert{c}
+
+%% 3. SSB upper sideband (phase method)
+ssb = m.*c - mh.*ch;      % = cos(2*pi*(fc+fm)*t)
+
+%% 4. Coherent demodulation
+[b, a] = butter(5, 150/(fs/2), 'low');
+rec = filter(b, a, ssb.*c) * 2;   % low-pass gives m/2, so x2
+
+%% 5. Spectrum
+N = 4096;
+f = (-N/2:N/2-1) * (fs/N);
+S = abs(fftshift(fft(ssb, N))) / N;
+
+%% 6. Plot style
+blue = [0.23 0.42 0.96];  red = [0.94 0.29 0.42];
+tms  = t*1e3;
+
+figure('Color','w','Position',[100 60 900 640])
+tl = tiledlayout(2,1,'TileSpacing','compact','Padding','compact');
+title(tl,'SSB-USB','FontSize',16,'FontWeight','bold')
+
+nexttile
+plot(tms,ssb,'Color',blue,'LineWidth',1.6)
+title('SSB-USB Signal'); xlabel('Time (ms)'); ylabel('Amplitude (V)')
+
+nexttile
+plot(tms,m,'Color',blue,'LineWidth',2); hold on
+plot(tms,rec,'--','Color',red,'LineWidth',2)
+title('Demodulated vs Original'); legend('m(t)','rec')
+xlabel('Time (ms)'); ylabel('Amplitude (V)')
+set(findall(gcf,'Type','axes'),'FontSize',11,'Box','on','GridAlpha',0.15,'XGrid','on','YGrid','on')
+
+figure('Color','w','Position',[140 100 900 340])
+area(f/1e3,S,'FaceColor',red,'FaceAlpha',0.25,'EdgeColor',red,'LineWidth',1.5)
+xlim([-2 2]); grid on; box on
+title('SSB-USB Magnitude Spectrum')
+xlabel('Frequency (kHz)'); ylabel('|S(f)|')`;
+
+D.SSB.orig=R`clear
+clc
+close all
+fs = 10000;
+t = 0:1/fs:0.04;
+fc = 1000;
+fm = 100;
+m = cos(2*pi*fm*t);
+m_hat = sin(2*pi*fm*t);
+c = cos(2*pi*fc*t);
+c_hat = sin(2*pi*fc*t);
+ssb = m.*c - m_hat.*c_hat;
+[b, a] = butter(5, 150/(fs/2), 'low');
+rec = filter(b, a, ssb.*c) * 2;   % FIXED: was *4
+N = 4096;
+f = (-N/2:N/2-1)*(fs/N);
+SSB_fft = abs(fftshift(fft(ssb, N))) / N;
+figure
+subplot(2,1,1)
+plot(t*1e3, ssb, 'b')
+grid on
+title('SSB-USB Signal')
+xlabel('ms')
+ylabel('V')
+subplot(2,1,2)
+plot(t*1e3, m, 'b', t*1e3, rec, 'm--')
+grid on
+title('Demodulated vs Original')
+xlabel('ms')
+ylabel('V')
+legend('m(t)','rec')
+figure
+plot(f/1e3, SSB_fft, 'r')
+xlim([-2 2])
+grid on
+title('SSB-USB Magnitude Spectrum')
+xlabel('kHz')
+ylabel('|S(f)|')`;
+
+D.AM.exp=`<h3>Idea</h3><p><code>s(t) = (Ac + m(t))·cos(2π fc t)</code>, <code>m(t) = μ·cos(2π fm t)</code>. The message rides on the carrier's amplitude.</p>
+<h3>Line by line</h3><table><tr><th>Code</th><th>Meaning</th></tr>
+<tr><td><code>fs, t</code></td><td>20 kHz sampling, 40 ms window, so 4 message cycles and 40 carrier cycles</td></tr>
+<tr><td><code>m1, m2</code></td><td>μ = 0.5 (fine) and μ = 1.5 (overmodulated)</td></tr>
+<tr><td><code>s1, s2</code></td><td>AM waveforms</td></tr>
+<tr><td><code>abs(s1)</code></td><td>Full-wave rectifier (the diode in an envelope detector)</td></tr>
+<tr><td><code>butter(5,150/(fs/2))</code></td><td>5th-order low-pass at 150 Hz; keeps fm, kills fc. Cutoff is normalized by Nyquist (fs/2)</td></tr>
+<tr><td><code>(rec-mean)*pi/2</code></td><td>Mean of |cos| is 2/π, so ×π/2 restores amplitude; subtracting the mean removes DC (Ac)</td></tr>
+<tr><td><code>fftshift(fft(s1,N))/N</code></td><td>Centers 0 Hz; /N normalizes the magnitude</td></tr></table>
+<h3>What to see</h3><ul><li>μ ≤ 1: envelope = 1 + m(t), recovery works.</li><li>μ &gt; 1: envelope goes negative, |1+m| distorts the message.</li><li>Spectrum: carrier at ±1 kHz, sidebands at ±900 and ±1100 Hz. Bandwidth = 2·fm = 200 Hz.</li></ul>
+<div class="warn">The recovered signal looks wrong for the first few ms because the filter starts at rest (transient).</div>`;
+
+D.SSB.exp=`<h3>Idea</h3><p>Keep only one sideband. With the phase method, <code>s = m·cos(ωc t) − m̂·sin(ωc t)</code> gives the upper sideband; <code>+</code> gives the lower.</p>
+<h3>Line by line</h3><table><tr><th>Code</th><th>Meaning</th></tr>
+<tr><td><code>m_hat, c_hat</code></td><td>90° shifted versions (Hilbert transforms) of cos: sin</td></tr>
+<tr><td><code>m.*c - m_hat.*c_hat</code></td><td>cos(A)cos(B) − sin(A)sin(B) = cos(A+B), a single tone at fc + fm = 1.1 kHz</td></tr>
+<tr><td><code>ssb.*c</code></td><td>Multiply by the carrier: gives m/2 plus a term at 2fc + fm</td></tr>
+<tr><td><code>butter(...)</code></td><td>Low-pass removes the 2fc + fm term</td></tr>
+<tr><td><code>*2</code></td><td>Restores the 1/2 lost in demodulation</td></tr></table>
+<h3>What to see</h3><ul><li>Time plot: constant-amplitude sine, no envelope.</li><li>Spectrum: one line at +1.1 kHz and its mirror at −1.1 kHz.</li><li>Bandwidth = fm, half of AM.</li></ul>
+<div class="warn"><b>Bug fixed:</b> the original used <code>*4</code>, which makes the recovered signal 2× too big. It should be <code>*2</code>.</div>`;
+
+D.AM.lab=R`clearvars; clc; close all;
+fs = 20000; % Sampling Frequency
+t = 0:1/fs:0.04; % Time vector (40 ms display window)
+fc = 1000; % Carrier frequency (1 kHz)
+fm = 100; % Message frequency (100 Hz)
+Ac = 1.0; % Carrier Amplitude
+
+%% Case A: Under-modulation (m = 0.5)
+Am1 = 0.5;
+message1 = Am1 * cos(2 * pi * fm * t);
+am_under = (Ac + message1) .* cos(2 * pi * fc * t);
+% Asynchronous Demodulation Chain (Abs + Lowpass Filter)
+rectified = abs(am_under);
+[b, a] = butter(5, 150 / (fs / 2), 'low');
+recovered = filter(b, a, rectified);
+recovered = (recovered - mean(recovered)) * (pi / 2); % Scale & remove DC
+
+%% Case B: Over-modulation (m = 1.5)
+Am2 = 1.5;
+message2 = Am2 * cos(2 * pi * fm * t);
+am_over = (Ac + message2) .* cos(2 * pi * fc * t);
+
+%% FFT Spectral Profile Generation (for m = 0.5)
+N = 4096;
+f = (-N/2:N/2-1) * (fs / N);
+AM_fft = abs(fftshift(fft(am_under, N))) / N;
+
+%% Visualizations
+% Figure 1: Under-Modulation vs Over-Modulation Time Domain
+figure('Name', 'Scope Configurations - Time Domain');
+subplot(3,1,1);
+plot(t*1000, am_under, 'b', 'LineWidth', 1); hold on;
+plot(t*1000, Ac + message1, 'r--', 'LineWidth', 1.2);
+title('Scope 1: Normal AM Modulated Signal (m = 0.5)');
+xlabel('Time (ms)'); ylabel('Voltage (V)'); grid on;
+subplot(3,1,2);
+plot(t*1000, am_over, 'k', 'LineWidth', 1); hold on;
+plot(t*1000, abs(Ac + message2), 'r--', 'LineWidth', 1.2);
+title('Scope 1: Over-modulated Signal (m = 1.5) - Notice Phase Reversals');
+xlabel('Time (ms)'); ylabel('Voltage (V)'); grid on;
+subplot(3,1,3);
+plot(t*1000, message1, 'b', 'LineWidth', 2); hold on;
+plot(t*1000, recovered, 'm--', 'LineWidth', 1.5);
+title('Scope 2: Demodulated Signal Output vs Original Message');
+xlabel('Time (ms)'); ylabel('Voltage (V)'); legend('Original m(t)', 'Recovered'); grid on;
+
+% Figure 2: Spectrum Analyzer View
+figure('Name', 'Spectrum Analyzer Window');
+plot(f/1000, AM_fft, 'Color', [0, 0.5, 0], 'LineWidth', 1.5);
+title('Spectrum Analyzer: AM Signal Magnitude Spectrum');
+xlabel('Frequency (kHz)'); ylabel('Magnitude |S(f)|');
+xlim([-2, 2]); grid on;`;
+
+D.SSB.lab=R`clearvars; clc; close all;
+fs = 10000; % Sampling Frequency
+t = 0:1/fs:0.04; % Time vector (40 ms window)
+fc = 1000; % Carrier frequency (1 kHz)
+fm = 100; % Message frequency (100 Hz)
+
+%% Message and its Hilbert Transform
+message = cos(2 * pi * fm * t);
+message_hilbert = sin(2 * pi * fm * t); % -90 degree shift of cos is sin
+
+%% SSB Generation (Upper Sideband - USB)
+carrier_cos = cos(2 * pi * fc * t);
+carrier_sin = sin(2 * pi * fc * t);
+ssb_usb = message .* carrier_cos - message_hilbert .* carrier_sin;
+
+%% Coherent Demodulation & Filtering
+demod_raw = ssb_usb .* carrier_cos;
+[b, a] = butter(5, 150 / (fs / 2), 'low');
+recovered = filter(b, a, demod_raw) * 4; % PDF has *4 here, correct value is *2
+
+%% FFT Spectral Profile Generation
+N = 4096;
+f = (-N/2:N/2-1) * (fs / N);
+SSB_fft = abs(fftshift(fft(ssb_usb, N))) / N;
+
+%% Visualizations
+figure('Name', 'SSB Time Domain Analysis');
+subplot(2,1,1);
+plot(t*1000, ssb_usb, 'b', 'LineWidth', 1);
+title('Scope 1: SSB-USB Modulated Signal Time Domain Waveform');
+xlabel('Time (ms)'); ylabel('Voltage (V)'); grid on;
+subplot(2,1,2);
+plot(t*1000, message, 'b', 'LineWidth', 2); hold on;
+plot(t*1000, recovered, 'm--', 'LineWidth', 1.5);
+title('Scope 2: Coherent Demodulated Output vs Original Message');
+xlabel('Time (ms)'); ylabel('Voltage (V)'); legend('Original m(t)', 'Recovered'); grid on;
+
+figure('Name', 'Spectrum Analyzer Window');
+plot(f/1000, SSB_fft, 'Color', [0.7, 0.2, 0], 'LineWidth', 1.5);
+title('Spectrum Analyzer: SSB-USB Signal Magnitude Spectrum');
+xlabel('Frequency (kHz)'); ylabel('Magnitude |S(f)|');
+xlim([-2, 2]); grid on;`;
+
+D.AM.qa=`<h3>Q1. Transmission bandwidth</h3><p>Spectrum lines: carrier at fc, sidebands at fc − fm and fc + fm. The occupied band runs from fc − fm to fc + fm, so <code>BW = 2·fm</code>. Here: 2 × 100 = <b>200 Hz</b>.</p>
+<h3>Q2. Why the envelope detector fails when μ &gt; 1</h3><p>The envelope Ac + m(t) goes negative, and the carrier flips phase by 180° there. The detector (Abs + low-pass) outputs |Ac + m(t)|, not Ac + m(t). The negative lobes are folded upward, so the output is a rectified, distorted version of the message with extra harmonics (2fm, 3fm…). The low-pass cannot remove them because they fall inside its passband. The message cannot be recovered correctly.</p>
+<h3>Q3. Power efficiency at μ = 1</h3><p><code>η = μ² / (2 + μ²)</code>. At μ = 1: η = 1/3 = <b>33.3%</b>. Only a third of the power carries information; <b>66.7%</b> is wasted in the carrier. Fixes: <b>DSB-SC</b> (no carrier), <b>SSB</b> (no carrier, one sideband), <b>VSB</b> (a vestige of one sideband, used in TV).</p>`;
+
+D.SSB.qa=`<h3>Q1. Sum block + − changed to + +</h3><p>The signal becomes <code>m·cos(ωc t) + m̂·sin(ωc t) = cos((ωc − ωm)t)</code>. The upper sideband cancels and the <b>lower sideband (LSB)</b> is transmitted: a single line at 0.9 kHz.</p>
+<h3>Q2. Branching Sine Wave1 to Product3</h3><p>The demodulator carrier is then the exact same signal as the modulator carrier: same frequency and phase. A separate Sine Wave4 is a different oscillator. Any phase error φ gives output m·cos φ (smaller, and zero at 90°). Any frequency error gives a drifting, beating output.</p>
+<h3>Q3. Bandwidth efficiency vs AM</h3><p>SSB needs <code>BW = fm = 100 Hz</code>. AM needs <code>2·fm = 200 Hz</code>. SSB uses <b>half the bandwidth</b>, so it is 2× more bandwidth-efficient. It also wastes no power on the carrier.</p>
+<h3>Q4. Why not the direct phase-shift method for voice or music</h3><p>Real messages contain many frequencies, and each needs an exact −90° shift while keeping its amplitude. A sine block only shifts one known tone. Replace it with a <b>Hilbert Transformer</b> block (a wideband 90° phase-shift filter, e.g. a Hilbert FIR filter in the DSP System Toolbox).</p>
+<h3>Q5. 10 Hz offset in the receiver carrier</h3><p>The local carrier is cos(2π(fc + Δf)t). Multiplying: <code>cos(2π(fc+fm)t)·cos(2π(fc+Δf)t) = ½cos(2π(fm−Δf)t) + ½cos(2π(2fc+fm+Δf)t)</code>. After the low-pass only the first term remains: a <b>90 Hz</b> tone instead of 100 Hz (110 Hz if the offset is −10 Hz). Physically, every frequency in the message shifts by the same Δf. For voice this gives the "Donald Duck" effect, because harmonic ratios are destroyed.</p>`;
+
+const TABS=[['short','Short'],['long','Styled (long)'],['lab','Lab PDF code'],['orig','My code'],['exp','Explain'],['qa','Lab questions'],['cheat','Cheat sheet']];
+const CHEAT=`<div class="exp"><h3>AM</h3><table><tr><th>Item</th><th>Formula</th></tr>
+<tr><td>Signal</td><td><code>(Ac + m)cos(ωc t)</code></td></tr><tr><td>Mod index</td><td><code>μ = Am/Ac</code> (must be ≤ 1)</td></tr>
+<tr><td>Bandwidth</td><td><code>2·fm</code></td></tr><tr><td>Efficiency</td><td><code>η = μ² / (2 + μ²)</code></td></tr><tr><td>Total power</td><td><code>Pt = Pc(1 + μ²/2)</code></td></tr></table>
+<h3>SSB</h3><table><tr><th>Item</th><th>Formula</th></tr>
+<tr><td>USB</td><td><code>m·cos(ωc t) − m̂·sin(ωc t)</code></td></tr><tr><td>LSB</td><td><code>m·cos(ωc t) + m̂·sin(ωc t)</code></td></tr>
+<tr><td>Bandwidth</td><td><code>fm</code></td></tr><tr><td>Demod</td><td>multiply by carrier, then low-pass (gives m/2)</td></tr></table>
+<h3>MATLAB reminders</h3><ul><li><code>.*</code> is element-wise multiply</li><li><code>butter(n, fc/(fs/2))</code>: cutoff is normalized by Nyquist</li><li><code>fftshift</code> centers 0 Hz</li><li><code>tiledlayout</code> needs R2019b or newer</li></ul></div>`;
+let sig='AM',tab='short';
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const KW=new Set('clear clc close all figure hold on off grid box xlim ylim legend title xlabel ylabel'.split(' '));
+const FN=new Set('plot subplot cos sin abs mean filter butter fft fftshift area nexttile tiledlayout findall set pi'.split(' '));
+function hl(code){return code.split('\n').map(line=>{
+ if(/^\s*%%/.test(line))return`<span class="l"><span class="sec">${esc(line)}</span></span>`;
+ const h=esc(line).replace(/(%.*$)|('[^'\n]*')|(\b\d+\.?\d*(?:e[-+]?\d+)?\b)|(\b[A-Za-z_]\w*\b)/g,(m,c,s,n,w)=>c?`<span class="c">${c}</span>`:s?`<span class="s">${s}</span>`:n?`<span class="n">${n}</span>`:KW.has(w)?`<span class="k">${w}</span>`:FN.has(w)?`<span class="f">${w}</span>`:w);
+ return`<span class="l">${h||' '}</span>`}).join('')}
+function copy(txt,btn){const done=()=>{btn.textContent='Copied';setTimeout(()=>btn.textContent='Copy',1400)};
+ try{navigator.clipboard.writeText(txt).then(done,fb)}catch(e){fb()}
+ function fb(){const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();try{document.execCommand('copy');done()}catch(e){}t.remove()}}
+function render(){
+ $('#bAM').classList.toggle('on',sig=='AM');$('#bSSB').classList.toggle('on',sig=='SSB');
+ $('#tabs').innerHTML=TABS.map(([k,n])=>`<button data-k="${k}" class="${k==tab?'on':''}">${n}</button>`).join('');
+ document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.k;render()});
+ const o=$('#out');
+ if(tab=='exp'||tab=='qa')o.innerHTML=`<div class="exp">${D[sig][tab]}</div>`;
+ else if(tab=='cheat')o.innerHTML=CHEAT;
+ else{const code=D[sig][tab],nm=(sig=='AM'?'am':'ssb')+'_'+tab+'.m',n=code.split('\n').length;
+  o.innerHTML=`<div class="win"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>${nm} · ${n} lines</span><button id="cp">Copy</button></div><pre>${hl(code)}</pre></div>`;
+  $('#cp').onclick=e=>copy(code,e.target)}}
+function $(s){return document.querySelector(s)}
+$('#bAM').onclick=()=>{sig='AM';render()};$('#bSSB').onclick=()=>{sig='SSB';render()};
+render();
+</script></body></html>
